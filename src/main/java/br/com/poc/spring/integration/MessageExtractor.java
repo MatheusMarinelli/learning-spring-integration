@@ -1,6 +1,10 @@
 package br.com.poc.spring.integration;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.integration.annotation.Transformer;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.GenericMessage;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -9,9 +13,14 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class MessageExtractor {
+
+    @Autowired
+    @Qualifier("error_channel")
+    private MessageChannel errorChannel;
 
     /**
      * Intercept an input channel e post the return on an output channel
@@ -20,20 +29,30 @@ public class MessageExtractor {
      * @return
      * @throws IOException
      */
-    @Transformer(inputChannel = "input_channel", outputChannel = "processing_channel")
+    @Transformer(inputChannel = "input_channel", outputChannel = "processing_write_channel")
     public File sendFileToProcessingChannel(File file) {
         return file;
     }
 
     @Transformer(inputChannel = "processing_read_channel", outputChannel = "output_channel")
     public File sendFileToOutputChannel(File file) throws IOException {
+        AtomicBoolean inconsistency = new AtomicBoolean(false);
+
         System.out.println("Processing start at: " + LocalDateTime.now());
         BufferedReader reader = new BufferedReader(new FileReader(file));
         reader.lines().forEach(line -> {
             if (line.getBytes(StandardCharsets.UTF_8).length != 150) {
-                System.out.println("Linha menor que 150 Bytes");
+                System.out.println("Line length is lesser then 150 bytes!");
+                inconsistency.set(true);
             }
         });
+
+        if (inconsistency.get()) {
+            reader.close();
+            errorChannel.send(new GenericMessage<>(file));
+            throw new RuntimeException("File has inconsistent lines!");
+        }
+
         System.out.println("Processing finished at: " + LocalDateTime.now());
         reader.close();
         return file;

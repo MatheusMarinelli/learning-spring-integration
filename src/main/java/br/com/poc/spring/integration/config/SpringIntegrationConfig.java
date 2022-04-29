@@ -24,8 +24,10 @@ public class SpringIntegrationConfig {
     private static final String INPUT_DIR = "E:\\file\\input";
     private static final String OUTPUT_DIR = "E:\\file\\output";
     private static final String PROCESSING_DIR = "E:\\file\\processing";
+    private static final String ERROR_DIR = "E:\\file\\error";
 
     private static final String FILE_TYPE = "*.txt";
+
 
 
     @Bean("input_channel")
@@ -33,7 +35,7 @@ public class SpringIntegrationConfig {
         return new DirectChannel();
     }
 
-    @Bean("processing_channel")
+    @Bean("processing_write_channel")
     public MessageChannel processingChannel() {
         return new DirectChannel();
     }
@@ -45,6 +47,11 @@ public class SpringIntegrationConfig {
 
     @Bean("output_channel")
     public MessageChannel outputChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean("error_channel")
+    public MessageChannel errorChannel() {
         return new DirectChannel();
     }
 
@@ -87,8 +94,8 @@ public class SpringIntegrationConfig {
      * @return
      */
     @Bean
-    @ServiceActivator(inputChannel = "processing_channel")
-    public MessageHandler writting() {
+    @ServiceActivator(inputChannel = "processing_write_channel")
+    public MessageHandler writtingProcessing() {
         FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(PROCESSING_DIR));
         handler.setFileExistsMode(FileExistsMode.REPLACE);
         handler.setExpectReply(false);
@@ -101,6 +108,16 @@ public class SpringIntegrationConfig {
     @ServiceActivator(inputChannel = "output_channel")
     public MessageHandler writtingOutput() {
         FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(OUTPUT_DIR));
+        handler.setFileExistsMode(FileExistsMode.REPLACE);
+        handler.setExpectReply(false);
+        handler.setDeleteSourceFiles(true);
+        return handler;
+    }
+
+    @Bean
+    @ServiceActivator(inputChannel = "error_channel")
+    public MessageHandler writtingError() {
+        FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(ERROR_DIR));
         handler.setFileExistsMode(FileExistsMode.REPLACE);
         handler.setExpectReply(false);
         handler.setDeleteSourceFiles(true);
