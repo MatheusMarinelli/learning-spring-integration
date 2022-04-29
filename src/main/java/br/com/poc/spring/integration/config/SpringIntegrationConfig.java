@@ -90,9 +90,10 @@ public class SpringIntegrationConfig {
     @ServiceActivator(inputChannel = "processing_channel")
     public MessageHandler writting() {
         FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(PROCESSING_DIR));
-        handler.setFileExistsMode(FileExistsMode.APPEND);
-        handler.setAppendNewLine(true);
+        handler.setFileExistsMode(FileExistsMode.REPLACE);
         handler.setExpectReply(false);
+        // EXCLUDE SOURCE FILE AFTER COPY IT TO THE DESTINATION DIR
+        handler.setDeleteSourceFiles(true);
         return handler;
     }
 
@@ -100,9 +101,9 @@ public class SpringIntegrationConfig {
     @ServiceActivator(inputChannel = "output_channel")
     public MessageHandler writtingOutput() {
         FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(OUTPUT_DIR));
-        handler.setFileExistsMode(FileExistsMode.APPEND);
-        handler.setAppendNewLine(true);
+        handler.setFileExistsMode(FileExistsMode.REPLACE);
         handler.setExpectReply(false);
+        handler.setDeleteSourceFiles(true);
         return handler;
     }
 

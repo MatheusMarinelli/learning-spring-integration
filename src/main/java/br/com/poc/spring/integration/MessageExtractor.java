@@ -21,7 +21,7 @@ public class MessageExtractor {
      * @throws IOException
      */
     @Transformer(inputChannel = "input_channel", outputChannel = "processing_channel")
-    public File sendFileToProcessingChannel(File file) throws IOException {
+    public File sendFileToProcessingChannel(File file) {
         return file;
     }
 
@@ -35,6 +35,7 @@ public class MessageExtractor {
             }
         });
         System.out.println("Processing finished at: " + LocalDateTime.now());
+        reader.close();
         return file;
     }
 
