@@ -34,6 +34,13 @@ public class MessageExtractor {
         return file;
     }
 
+    /**
+     * Check if file has 150 bytes per line
+     *
+     * @param file
+     * @return
+     * @throws IOException
+     */
     @Transformer(inputChannel = "processing_read_channel", outputChannel = "output_channel")
     public File sendFileToOutputChannel(File file) throws IOException {
         AtomicBoolean inconsistency = new AtomicBoolean(false);
@@ -47,6 +54,7 @@ public class MessageExtractor {
             }
         });
 
+        // if file is not consistent it goes to an error channel
         if (inconsistency.get()) {
             reader.close();
             errorChannel.send(new GenericMessage<>(file));

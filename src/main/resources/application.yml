@@ -1,0 +1,6 @@
+file:
+  dir:
+    input: 'E:\file\input'
+    processing: 'E:\file\processing'
+    output: 'E:\file\output'
+    error: 'E:\file\error'
