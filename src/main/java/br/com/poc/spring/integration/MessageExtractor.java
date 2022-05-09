@@ -23,18 +23,6 @@ public class MessageExtractor {
     private MessageChannel errorChannel;
 
     /**
-     * Intercept an input channel e post the return on an output channel
-     *
-     * @param file
-     * @return
-     * @throws IOException
-     */
-    @Transformer(inputChannel = "input_channel", outputChannel = "processing_write_channel")
-    public File sendFileToProcessingChannel(File file) {
-        return file;
-    }
-
-    /**
      * Check if file has 150 bytes per line
      *
      * @param file

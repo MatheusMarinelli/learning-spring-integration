@@ -1,5 +1,7 @@
 package br.com.poc.spring.integration.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,10 +13,10 @@ import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.Pollers;
 import org.springframework.integration.file.FileReadingMessageSource;
 import org.springframework.integration.file.FileWritingMessageHandler;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.regex.Pattern;
 
 @Configuration
@@ -34,11 +36,49 @@ public class SpringIntegrationConfig {
     private String errorDir;
 
 
+    @Autowired
+    @Qualifier("processing_read_channel")
+    private MessageChannel processingReadChannel;
+
+    @Autowired
+    @Qualifier("error_channel")
+    private MessageChannel errorChannel;
+
+    @Autowired
+    @Qualifier("output_channel")
+    private MessageChannel outputChannel;
+
+
     @Bean
     public IntegrationFlow readFileFromInputDirectory() {
-        return IntegrationFlows.from(inputDirectory(), consumer -> consumer.poller(Pollers.fixedDelay(5000)))
+        return IntegrationFlows.from(inputDirectory(), consumer -> {
+                    consumer.poller(Pollers.fixedDelay(2000));
+                })
                 .filter(fileFilter())
                 .handle(processingDirectoryHandler())
+                .get();
+
+    }
+
+    @Bean
+    public IntegrationFlow readFileFromProcessingDirectory() {
+        return IntegrationFlows.from(processingDirectory(), consumer -> consumer.poller(Pollers.fixedDelay(2000)))
+                .filter(fileFilter())
+                .channel(processingReadChannel)
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow readFileFromOutputChannel() {
+        return IntegrationFlows.from(outputChannel)
+                .handle(outputDirectoryHandler())
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow readFileFromErrorChannel() {
+        return IntegrationFlows.from(errorChannel)
+                .handle(errorDirectoryHandler())
                 .get();
     }
 
@@ -65,6 +105,13 @@ public class SpringIntegrationConfig {
     }
 
     @Bean
+    public MessageSource<File> processingDirectory() {
+        FileReadingMessageSource source = new FileReadingMessageSource();
+        source.setDirectory(new File(processingDir));
+        return source;
+    }
+
+    @Bean
     public MessageHandler processingDirectoryHandler() {
         FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(processingDir));
         handler.setExpectReply(false);
@@ -72,52 +119,22 @@ public class SpringIntegrationConfig {
         return  handler;
     }
 
-//    @Bean
-//    @InboundChannelAdapter(value = "processing_read_channel",poller = @Poller(fixedDelay = "2000"))
-//    public MessageSource<File> readFileProcessing() {
-//        // FILE READER
-//        FileReadingMessageSource reader = new FileReadingMessageSource();
-//        // SOURCE FILE DIRECTORY
-//        reader.setDirectory(new File(processingDir));
-//        // SOURCE FILE EXTENSION
-//        reader.setFilter(new SimplePatternFileListFilter(FILE_TYPE));
-//        return reader;
-//    }
-//
-//    /**
-//     * WRITTE SOURCE FILE CONTENT IN NEW FILE
-//     *
-//     * @return
-//     */
-//    @Bean
-//    @ServiceActivator(inputChannel = "processing_write_channel")
-//    public MessageHandler writtingProcessing() {
-//        FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(processingDir));
-//        handler.setFileExistsMode(FileExistsMode.REPLACE);
-//        handler.setExpectReply(false);
-//        // EXCLUDE SOURCE FILE AFTER COPY IT TO THE DESTINATION DIR
-//        handler.setDeleteSourceFiles(true);
-//        return handler;
-//    }
-//
-//    @Bean
-//    @ServiceActivator(inputChannel = "output_channel")
-//    public MessageHandler writtingOutput() {
-//        FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(outputDir));
-//        handler.setFileExistsMode(FileExistsMode.REPLACE);
-//        handler.setExpectReply(false);
-//        handler.setDeleteSourceFiles(true);
-//        return handler;
-//    }
-//
-//    @Bean
-//    @ServiceActivator(inputChannel = "error_channel")
-//    public MessageHandler writtingError() {
-//        FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(errorDir));
-//        handler.setFileExistsMode(FileExistsMode.REPLACE);
-//        handler.setExpectReply(false);
-//        handler.setDeleteSourceFiles(true);
-//        return handler;
-//    }
+    @Bean
+    public MessageHandler outputDirectoryHandler() {
+        FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(outputDir));
+        handler.setExpectReply(false);
+        handler.setDeleteSourceFiles(true);
+        return  handler;
+    }
+
+    @Bean
+    public MessageHandler errorDirectoryHandler() {
+        FileWritingMessageHandler handler = new FileWritingMessageHandler(new File(errorDir));
+        handler.setExpectReply(false);
+        handler.setDeleteSourceFiles(true);
+        return  handler;
+    }
+
+
 
 }
