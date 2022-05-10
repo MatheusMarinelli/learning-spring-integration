@@ -10,11 +10,16 @@ import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.core.MessageSource;
 import org.springframework.integration.file.FileReadingMessageSource;
 import org.springframework.integration.file.FileWritingMessageHandler;
+import org.springframework.integration.file.filters.FileListFilter;
 import org.springframework.integration.file.filters.SimplePatternFileListFilter;
 import org.springframework.integration.file.support.FileExistsMode;
 import org.springframework.messaging.MessageHandler;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableIntegration
@@ -54,7 +59,7 @@ public class SpringIntegrationConfig {
         // SOURCE FILE DIRECTORY
         reader.setDirectory(new File(inputDir));
         // SOURCE FILE EXTENSION
-        reader.setFilter(new SimplePatternFileListFilter(FILE_TYPE));
+        reader.setFilter(filter());
         return reader;
     }
 
@@ -66,7 +71,7 @@ public class SpringIntegrationConfig {
         // SOURCE FILE DIRECTORY
         reader.setDirectory(new File(processingDir));
         // SOURCE FILE EXTENSION
-        reader.setFilter(new SimplePatternFileListFilter(FILE_TYPE));
+        reader.setFilter(filter());
         return reader;
     }
 
@@ -104,6 +109,23 @@ public class SpringIntegrationConfig {
         handler.setExpectReply(false);
         handler.setDeleteSourceFiles(true);
         return handler;
+    }
+
+    @Bean
+    public FileListFilter<File> filter() {
+
+        Pattern p1 = Pattern.compile("ABC.DEF.M[0-9]{3}");
+        Pattern p2 = Pattern.compile("ABC.[0-9]{3}");
+        Pattern p3 = Pattern.compile("XYZ.H[0-9]{3}");
+
+
+        return files -> Arrays.stream(files)
+                .filter(file -> file.length() > 0)
+                .filter(file -> file.getName().endsWith(".txt"))
+                .filter(file -> p1.matcher(file.getName().replace(".txt","")).matches() ||
+                                p2.matcher(file.getName().replace(".txt","")).matches() ||
+                                p3.matcher(file.getName().replace(".txt","")).matches())
+                .collect(Collectors.toList());
     }
 
 }
